@@ -18,6 +18,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a")
+        }
     }
 
     buildTypes {
@@ -40,7 +43,7 @@ android {
 
     packaging {
         jniLibs {
-            useLegacyPackaging = false
+            useLegacyPackaging = true
         }
         resources {
             excludes += setOf(
@@ -79,7 +82,8 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation("us.ihmc:log-tools:0.6.5")
     implementation("us.ihmc:jros2-android:1.1.6")
-    implementation("org.bytedeco:javacpp:1.5.11:android-arm64")
+    implementation("org.bytedeco:javacpp:1.5.9:android-arm64")
+    implementation("org.bytedeco:javacpp:1.5.9:android-arm")
     implementation("javax.xml.stream:stax-api:1.0-2")
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)

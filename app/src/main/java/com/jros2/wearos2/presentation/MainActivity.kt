@@ -50,6 +50,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        clearJavaCPPCache()
         enableEdgeToEdge()
         enableRosDiscovery()
         requestRuntimePermissions()
@@ -58,6 +59,21 @@ class MainActivity : ComponentActivity() {
             WeaROS2Theme {
                 WearHome(bridge)
             }
+        }
+    }
+
+    private fun clearJavaCPPCache() {
+        try {
+            val cacheDir = java.io.File(applicationContext.cacheDir, "javacpp")
+            if (cacheDir.exists()) {
+                cacheDir.deleteRecursively()
+            }
+            val filesDir = java.io.File(applicationContext.filesDir, "javacpp")
+            if (filesDir.exists()) {
+                filesDir.deleteRecursively()
+            }
+        } catch (e: Exception) {
+            // Ignore
         }
     }
 

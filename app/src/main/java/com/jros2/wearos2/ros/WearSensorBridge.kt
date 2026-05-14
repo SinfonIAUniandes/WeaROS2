@@ -59,14 +59,18 @@ class WearSensorBridge(private val context: Context) {
                             }
                             sensor.start(node, context)
                             log("${sensor.name} activo en $fullTopic")
-                        } catch (e: Exception) {
-                            log("Fallo iniciando ${sensor.name}: ${e.message}")
+                        } catch (t: Throwable) {
+                            val msg = "${t.javaClass.simpleName}: ${t.message}"
+                            val cause = t.cause?.let { " Cause: ${it.javaClass.simpleName}: ${it.message}" } ?: ""
+                            log("Fallo iniciando ${sensor.name}: $msg$cause")
                         }
                     }
                 }
                 _isRunning.value = true
-            } catch (e: Exception) {
-                log("Error ROS2: ${e.message}")
+            } catch (t: Throwable) {
+                val msg = "${t.javaClass.simpleName}: ${t.message}"
+                val cause = t.cause?.let { " Cause: ${it.javaClass.simpleName}: ${it.message}" } ?: ""
+                log("Error ROS2: $msg$cause")
             }
         }
     }
