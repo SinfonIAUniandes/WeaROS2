@@ -18,4 +18,8 @@ class SettingsManager(context: Context) {
     fun getTopicName(sensorId: String, defaultName: String): String {
         return prefs.getString("topic_$sensorId", defaultName) ?: defaultName
     }
+
+    fun setTopicName(sensorId: String, topicName: String) {
+        prefs.edit().putString("topic_$sensorId", topicName).apply()
+    }
 }
