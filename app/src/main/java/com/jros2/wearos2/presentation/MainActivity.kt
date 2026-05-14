@@ -142,10 +142,10 @@ fun WearHome(bridge: WearSensorBridge, onSettingsClick: () -> Unit) {
     DisposableEffect(context) {
         permissionsHint = buildString {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                append("GPS sin permiso. ")
+                append("GPS permission missing. ")
             }
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                append("Micrófono sin permiso.")
+                append("Microphone permission missing.")
             }
         }.trim()
         onDispose { }
@@ -166,7 +166,7 @@ fun WearHome(bridge: WearSensorBridge, onSettingsClick: () -> Unit) {
                 item {
                     Card(onClick = onSettingsClick) {
                         Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
-                            Text("Configuraciones")
+                            Text("Settings")
                             Text("Namespace, Domain ID, etc.")
                         }
                     }
@@ -174,8 +174,8 @@ fun WearHome(bridge: WearSensorBridge, onSettingsClick: () -> Unit) {
                 item {
                     Card(onClick = { if (isRunning) bridge.stop() else bridge.start() }) {
                         Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
-                            Text(if (isRunning) "Detener bridge" else "Iniciar bridge")
-                            Text(if (isRunning) "Publicando ROS2" else "Idle")
+                            Text(if (isRunning) "Stop bridge" else "Start bridge")
+                            Text(if (isRunning) "Publishing ROS2" else "Idle")
                         }
                     }
                 }
@@ -246,7 +246,7 @@ fun WearSettings(bridge: WearSensorBridge, settings: SettingsManager, onBack: ()
             ) {
                 item {
                     ListHeader {
-                        Text("Configuraciones", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                        Text("Settings", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     }
                 }
                 item {
@@ -278,7 +278,7 @@ fun WearSettings(bridge: WearSensorBridge, settings: SettingsManager, onBack: ()
                 }
                 item {
                     ListHeader {
-                        Text("Tópicos", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                        Text("Topics", textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     }
                 }
                 items(bridge.sensors.size) { index ->
@@ -310,7 +310,7 @@ fun WearSettings(bridge: WearSensorBridge, settings: SettingsManager, onBack: ()
                         },
                         modifier = Modifier.fillMaxWidth().height(52.dp)
                     ) {
-                        Text("Guardar y Volver")
+                        Text("Save and Return")
                     }
                 }
             }

@@ -1,48 +1,48 @@
-# Solución al problema de librerías nativas en Wear OS (Galaxy Watch 7)
+# Solution to Native Library Issues on Wear OS (Galaxy Watch 7)
 
-Este documento explica paso a paso la serie de problemas y soluciones implementadas para lograr que la librería `jros2` (que utiliza Fast-DDS escrito en C++) funcionara correctamente dentro de un reloj inteligente Galaxy Watch 7 con Wear OS 5.
+This document explains step-by-step the series of issues and solutions implemented to get the `jros2` library (which uses Fast-DDS written in C++) working correctly inside a Galaxy Watch 7 smartwatch running Wear OS 5.
 
-## El Problema Principal: "No implementation found" y "Crasheos Silenciosos"
-Al intentar iniciar la comunicación ROS 2 desde la app del reloj, la aplicación crasheaba sin dejar rastro en los logs normales, o bien mostraba el error:
-`Error ROS2: ExceptionInInitializerError Cause: UnsatisfiedLinkError: No implementation found...`
+## Main Issue: "No implementation found" and "Silent Crashes"
+When attempting to start ROS 2 communication from the watch app, the application would crash without leaving a trace in standard logs, or it would show the error:
+`ROS2 Error: ExceptionInInitializerError Cause: UnsatisfiedLinkError: No implementation found...`
 
-Esto significaba que la Máquina Virtual de Android (Dalvik) era incapaz de enlazar las funciones Java con sus implementaciones nativas en C++.
+This indicated that the Android Virtual Machine (Dalvik) was unable to link Java functions with their native C++ implementations.
 
-## Soluciones Implementadas
+## Implemented Solutions
 
-### 1. La Arquitectura Secreta de Wear OS (32-bits)
-A pesar de que el procesador del Galaxy Watch 7 (Exynos W1000) es de 64 bits (`arm64-v8a`), **Google y Samsung configuran Wear OS 5 para operar en un entorno de 32 bits (`armeabi-v7a`)** para ahorrar memoria RAM y batería de forma agresiva.
-* **Problema:** El script original de compilación de `jros2` (`build-android-arm64.bash`) solo generaba librerías para 64 bits. Al instalar el APK en el reloj, este buscaba la carpeta `armeabi-v7a` y, al no encontrar la librería nativa, fallaba al intentar cargarla.
-* **Solución:** Se creó un nuevo script `build-android-armeabi-v7a.bash` y se modificó `cppbuild.bash` en el repositorio `jros2` para añadir soporte oficial a la compilación cruzada hacia la arquitectura `armeabi-v7a`.
+### 1. The Secret Architecture of Wear OS (32-bit)
+Even though the Galaxy Watch 7 processor (Exynos W1000) is 64-bit (`arm64-v8a`), **Google and Samsung configure Wear OS 5 to operate in a 32-bit environment (`armeabi-v7a`)** to aggressively conserve RAM and battery life.
+* **Issue:** The original `jros2` build script (`build-android-arm64.bash`) only generated 64-bit libraries. When installing the APK on the watch, it searched for the `armeabi-v7a` directory and, failing to find the native library, failed during loading.
+* **Solution:** A new script `build-android-armeabi-v7a.bash` was created and `cppbuild.bash` in the `jros2` repository was modified to add official cross-compilation support for the `armeabi-v7a` architecture.
 
-### 2. El abandono de 32 bits por parte de JavaCPP
-Al intentar compilar para 32 bits, nos topamos con un problema de dependencias: la librería puente `JavaCPP` (usada por `jros2`) **eliminó el soporte para Android de 32 bits (`android-arm`) a partir de la versión 1.5.10.**
-* **Problema:** `jros2` estaba utilizando JavaCPP versión `1.5.11`. Al intentar compilar, Gradle fallaba porque no podía descargar el empaquetado de 32 bits desde Maven Central (ya no existe).
-* **Solución:** Se hizo un "downgrade" forzado en todo el ecosistema. Se modificó `cppbuild.bash`, `jros2/android/build.gradle.kts` y `WeaROS2/app/build.gradle.kts` para utilizar **JavaCPP 1.5.9**, la última versión en la historia que dio soporte a relojes Wear OS de 32 bits. Luego se recompiló y se volvió a publicar el AAR en Maven Local.
+### 2. JavaCPP Dropping 32-bit Support
+When attempting to compile for 32-bit, we encountered a dependency issue: the `JavaCPP` bridging library (used by `jros2`) **removed support for 32-bit Android (`android-arm`) starting with version 1.5.10.**
+* **Issue:** `jros2` was using JavaCPP version `1.5.11`. When trying to build, Gradle failed because it could not download the 32-bit package from Maven Central (as it no longer exists).
+* **Solution:** A forced downgrade across the ecosystem was performed. We modified `cppbuild.bash`, `jros2/android/build.gradle.kts`, and `WeaROS2/app/build.gradle.kts` to use **JavaCPP 1.5.9**, the last version in history to support 32-bit Wear OS watches. Then the AAR was recompiled and republished to Maven Local.
 
-### 3. Empaquetado `useLegacyPackaging = true`
-Los relojes inteligentes tienen reglas de memoria virtual mucho más estrictas que los celulares.
-* **Problema:** Por defecto, las versiones nuevas de Android Gradle Plugin intentan leer las librerías `.so` directamente desde el APK comprimido haciendo mapeo en memoria (mmap). Esto provocaba que el sistema operativo del reloj matara el proceso por falta de RAM al mapear la inmensa librería de Fast-DDS.
-* **Solución:** Se añadió `useLegacyPackaging = true` en el `build.gradle.kts` de WeaROS2. Esto obliga a Android a desempaquetar y copiar físicamente los archivos `.so` al almacenamiento interno del reloj durante la instalación, evitando problemas de memoria al cargarlos.
+### 3. Packaging `useLegacyPackaging = true`
+Smartwatches have much stricter virtual memory rules compared to smartphones.
+* **Issue:** By default, new versions of the Android Gradle Plugin attempt to read `.so` libraries directly from the compressed APK using memory mapping (mmap). This caused the watch operating system to kill the process due to lack of RAM when mapping the massive Fast-DDS library.
+* **Solution:** `useLegacyPackaging = true` was added to the `build.gradle.kts` of WeaROS2. This forces Android to unpack and physically copy `.so` files to the watch's internal storage during installation, avoiding memory mapping issues upon loading.
 
-### 4. Filtrado de ABIs (`abiFilters`)
-Para evitar que Gradle empaquetara arquitecturas innecesarias, y asegurar la compatibilidad tanto con el reloj como con el emulador, se configuró el bloque de NDK en WeaROS2:
+### 4. ABI Filtering (`abiFilters`)
+To prevent Gradle from packaging unnecessary architectures and ensure compatibility with both the watch and emulator, the NDK block in WeaROS2 was configured:
 ```kotlin
 ndk {
     abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64")
 }
 ```
 
-### 5. Prevención de Crasheos Silenciosos (`Throwable`)
-El crasheo silencioso original ocurría porque el código Kotlin tenía un bloque `try-catch(e: Exception)`.
-* **Problema:** Los errores de bajo nivel relacionados con JNI o carga de librerías nativas (`UnsatisfiedLinkError`, `ExceptionInInitializerError`) no heredan de `Exception`, sino de `Error`. Por lo tanto, pasaban de largo el bloque catch y mataban la app.
-* **Solución:** Se cambió el manejo de errores en `WearSensorBridge.kt` a `catch (t: Throwable)`. Además, se mejoró el log de pantalla para imprimir no solo el mensaje, sino la clase exacta del error y la "causa" (`t.cause`), revelando así la naturaleza real del fallo nativo.
+### 5. Preventing Silent Crashes (`Throwable`)
+The original silent crash occurred because the Kotlin code used a `try-catch(e: Exception)` block.
+* **Issue:** Low-level errors related to JNI or loading native libraries (`UnsatisfiedLinkError`, `ExceptionInInitializerError`) do not inherit from `Exception`, but from `Error`. Consequently, they bypassed the catch block and killed the app.
+* **Solution:** Error handling in `WearSensorBridge.kt` was changed to `catch (t: Throwable)`. Furthermore, on-screen logging was improved to print not only the message but also the exact error class and "cause" (`t.cause`), revealing the true nature of native failures.
 
 ---
 
-### ¿Cómo compilar de nuevo en el futuro?
-Si haces cambios en las interfaces de C++ en un futuro, debes:
-1. Exportar el NDK correcto: `export ANDROID_NDK='.../ndk/30.0.14904198'`
-2. Correr `bash build-android-arm64.bash`
-3. Correr `bash build-android-armeabi-v7a.bash`
-4. Publicar a Maven Local: `cd android && ../gradlew -p . publishReleasePublicationToMavenLocal`
+### How to recompile in the future?
+If you make changes to C++ interfaces in the future, you must:
+1. Export the correct NDK: `export ANDROID_NDK='.../ndk/30.0.14904198'`
+2. Run `bash build-android-arm64.bash`
+3. Run `bash build-android-armeabi-v7a.bash`
+4. Publish to Maven Local: `cd android && ../gradlew -p . publishReleasePublicationToMavenLocal`

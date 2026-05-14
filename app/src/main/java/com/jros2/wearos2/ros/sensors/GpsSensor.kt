@@ -24,7 +24,7 @@ class GpsSensor : WearSensor {
     override val enabled = MutableStateFlow(true)
     private val _messageCount = MutableStateFlow(0L)
     override val messageCount: StateFlow<Long> = _messageCount
-    private val _displayValue = MutableStateFlow("Esperando fix")
+    private val _displayValue = MutableStateFlow("Waiting for fix")
     override val displayValue: StateFlow<String> = _displayValue
 
     private val msg = NavSatFix()
@@ -76,12 +76,12 @@ class GpsSensor : WearSensor {
             if (lastKnown != null) {
                 listener.onLocationChanged(lastKnown)
             } else if (registered) {
-                _displayValue.value = "Buscando señal"
+                _displayValue.value = "Searching for signal"
             } else {
-                _displayValue.value = "Proveedor no disponible"
+                _displayValue.value = "Provider unavailable"
             }
         } catch (e: SecurityException) {
-            _displayValue.value = "Permiso denegado"
+            _displayValue.value = "Permission denied"
         }
     }
 

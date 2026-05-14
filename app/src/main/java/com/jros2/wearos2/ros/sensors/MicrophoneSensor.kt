@@ -43,7 +43,7 @@ class MicrophoneSensor : WearSensor {
         val encoding = AudioFormat.ENCODING_PCM_16BIT
         val minBuffer = AudioRecord.getMinBufferSize(sampleRateHz, channelConfig, encoding)
         if (minBuffer <= 0) {
-            _displayValue.value = "Error audio"
+            _displayValue.value = "Audio error"
             return
         }
         val bufferSize = (minBuffer * 2).coerceAtLeast(sampleRateHz / 10)
@@ -55,7 +55,7 @@ class MicrophoneSensor : WearSensor {
             bufferSize
         )
         if (recorder.state != AudioRecord.STATE_INITIALIZED) {
-            _displayValue.value = "Mic no disponible"
+            _displayValue.value = "Mic unavailable"
             recorder.release()
             return
         }
@@ -63,12 +63,12 @@ class MicrophoneSensor : WearSensor {
         try {
             recorder.startRecording()
         } catch (e: SecurityException) {
-            _displayValue.value = "Permiso denegado"
+            _displayValue.value = "Permission denied"
             recorder.release()
             audioRecord = null
             return
         }
-        _displayValue.value = "Transmitiendo audio"
+        _displayValue.value = "Streaming audio"
         audioJob = audioScope.launch {
             val readBuffer = ByteArray(bufferSize)
             val msg = AudioData()

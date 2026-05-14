@@ -35,7 +35,7 @@ class WearSensorBridge(private val context: Context) {
 
     fun start() {
         if (_isRunning.value) return
-        log("Iniciando bridge ROS2...")
+        log("Starting ROS2 bridge...")
         scope.launch {
             try {
                 val node = ROS2Node("wear_sensor_node", settings.domainId)
@@ -58,11 +58,11 @@ class WearSensorBridge(private val context: Context) {
                                 is MicrophoneSensor -> sensor.resolvedTopicName = fullTopic
                             }
                             sensor.start(node, context)
-                            log("${sensor.name} activo en $fullTopic")
+                            log("${sensor.name} active on $fullTopic")
                         } catch (t: Throwable) {
                             val msg = "${t.javaClass.simpleName}: ${t.message}"
                             val cause = t.cause?.let { " Cause: ${it.javaClass.simpleName}: ${it.message}" } ?: ""
-                            log("Fallo iniciando ${sensor.name}: $msg$cause")
+                            log("Failed starting ${sensor.name}: $msg$cause")
                         }
                     }
                 }
@@ -70,7 +70,7 @@ class WearSensorBridge(private val context: Context) {
             } catch (t: Throwable) {
                 val msg = "${t.javaClass.simpleName}: ${t.message}"
                 val cause = t.cause?.let { " Cause: ${it.javaClass.simpleName}: ${it.message}" } ?: ""
-                log("Error ROS2: $msg$cause")
+                log("ROS2 Error: $msg$cause")
             }
         }
     }
@@ -81,7 +81,7 @@ class WearSensorBridge(private val context: Context) {
         rosNode?.close()
         rosNode = null
         _isRunning.value = false
-        log("Bridge detenido")
+        log("Bridge stopped")
     }
 
     fun destroy() {
