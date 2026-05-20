@@ -1,10 +1,20 @@
 package com.jros2.wearos2.ros
 
 import android.content.Context
+import androidx.concurrent.futures.await
+import androidx.health.services.client.HealthServices
+import androidx.health.services.client.PassiveListenerCallback
+import androidx.health.services.client.data.DataPointContainer
+import androidx.health.services.client.data.DataType
+import androidx.health.services.client.data.PassiveListenerConfig
 import com.jros2.wearos2.SettingsManager
+import com.jros2.wearos2.ros.sensors.BloodOxygenSensor
+import com.jros2.wearos2.ros.sensors.FloorsSensor
 import com.jros2.wearos2.ros.sensors.GpsSensor
+import com.jros2.wearos2.ros.sensors.HeartRateSensor
 import com.jros2.wearos2.ros.sensors.ImuSensor
 import com.jros2.wearos2.ros.sensors.MicrophoneSensor
+import com.jros2.wearos2.ros.sensors.StepsSensor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -24,7 +34,11 @@ class WearSensorBridge(private val context: Context) {
     val sensors = listOf(
         ImuSensor(),
         GpsSensor(),
-        MicrophoneSensor()
+        MicrophoneSensor(),
+        HeartRateSensor(),
+        BloodOxygenSensor(),
+        StepsSensor(),
+        FloorsSensor()
     )
 
     private val _isRunning = MutableStateFlow(false)
@@ -32,6 +46,26 @@ class WearSensorBridge(private val context: Context) {
 
     private val _logs = MutableStateFlow<List<String>>(emptyList())
     val logs: StateFlow<List<String>> = _logs.asStateFlow()
+
+    private val passiveListenerCallback = object : PassiveListenerCallback {
+        override fun onNewDataPointsReceived(dataPoints: DataPointContainer) {
+            val stepsData = dataPoints.getData(DataType.STEPS_DAILY)
+            if (stepsData.isNotEmpty()) {
+                val latestSteps = stepsData.last().value
+                sensors.filterIsInstance<StepsSensor>().forEach {
+                    it.onStepsReceived(latestSteps)
+                }
+            }
+
+            val floorsData = dataPoints.getData(DataType.FLOORS_DAILY)
+            if (floorsData.isNotEmpty()) {
+                val latestFloors = floorsData.last().value
+                sensors.filterIsInstance<FloorsSensor>().forEach {
+                    it.onFloorsReceived(latestFloors)
+                }
+            }
+        }
+    }
 
     fun start() {
         if (_isRunning.value) return
@@ -56,6 +90,10 @@ class WearSensorBridge(private val context: Context) {
                                 is GpsSensor -> sensor.resolvedTopicName = fullTopic
                                 is ImuSensor -> sensor.resolvedTopicName = fullTopic
                                 is MicrophoneSensor -> sensor.resolvedTopicName = fullTopic
+                                is HeartRateSensor -> sensor.resolvedTopicName = fullTopic
+                                is BloodOxygenSensor -> sensor.resolvedTopicName = fullTopic
+                                is StepsSensor -> sensor.resolvedTopicName = fullTopic
+                                is FloorsSensor -> sensor.resolvedTopicName = fullTopic
                             }
                             sensor.start(node, context)
                             log("${sensor.name} active on $fullTopic")
@@ -64,6 +102,37 @@ class WearSensorBridge(private val context: Context) {
                             val cause = t.cause?.let { " Cause: ${it.javaClass.simpleName}: ${it.message}" } ?: ""
                             log("Failed starting ${sensor.name}: $msg$cause")
                         }
+                    }
+
+                    // Register passive listener callback for daily steps/floors
+                    try {
+                        val passiveClient = HealthServices.getClient(context).passiveMonitoringClient
+                        val capabilities = passiveClient.getCapabilitiesAsync().await()
+                        val supportedTypes = mutableSetOf<DataType<*, *>>()
+
+                        if (DataType.STEPS_DAILY in capabilities.supportedDataTypesPassiveMonitoring) {
+                            supportedTypes.add(DataType.STEPS_DAILY)
+                            log("Passive daily steps supported")
+                        } else {
+                            log("Passive daily steps NOT supported")
+                        }
+
+                        if (DataType.FLOORS_DAILY in capabilities.supportedDataTypesPassiveMonitoring) {
+                            supportedTypes.add(DataType.FLOORS_DAILY)
+                            log("Passive daily floors supported")
+                        } else {
+                            log("Passive daily floors NOT supported")
+                        }
+
+                        if (supportedTypes.isNotEmpty()) {
+                            val config = PassiveListenerConfig.builder()
+                                .setDataTypes(supportedTypes)
+                                .build()
+                            passiveClient.setPassiveListenerCallback(config, passiveListenerCallback)
+                            log("Registered passive callback")
+                        }
+                    } catch (e: Exception) {
+                        log("Failed setting passive client: ${e.message}")
                     }
                 }
                 _isRunning.value = true
@@ -78,6 +147,15 @@ class WearSensorBridge(private val context: Context) {
     fun stop() {
         if (!_isRunning.value) return
         sensors.forEach { it.stop() }
+        
+        try {
+            val passiveClient = HealthServices.getClient(context).passiveMonitoringClient
+            passiveClient.clearPassiveListenerCallbackAsync()
+            log("Cleared passive callback")
+        } catch (e: Exception) {
+            log("Failed clearing passive callback: ${e.message}")
+        }
+
         rosNode?.close()
         rosNode = null
         _isRunning.value = false

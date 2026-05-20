@@ -82,6 +82,8 @@ dependencies {
     implementation(libs.coroutines.android)
     implementation("us.ihmc:log-tools:0.6.5")
     implementation("us.ihmc:jros2-android:1.1.6")
+    implementation("androidx.health:health-services-client:1.1.0-rc02")
+    implementation("androidx.concurrent:concurrent-futures-ktx:1.1.0")
     implementation("org.bytedeco:javacpp:1.5.9:android-arm64")
     implementation("org.bytedeco:javacpp:1.5.9:android-arm")
     implementation("javax.xml.stream:stax-api:1.0-2")

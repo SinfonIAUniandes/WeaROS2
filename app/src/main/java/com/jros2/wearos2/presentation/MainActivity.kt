@@ -47,6 +47,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import com.jros2.wearos2.SettingsManager
 import com.jros2.wearos2.ros.WearSensorBridge
 import com.jros2.wearos2.presentation.theme.WeaROS2Theme
@@ -78,7 +81,18 @@ class MainActivity : ComponentActivity() {
                         showSettings = false
                     }
                 } else {
-                    WearHome(bridge) { showSettings = true }
+                    WearHome(
+                        bridge = bridge,
+                        onRequestPermissions = { requestRuntimePermissions() },
+                        onOpenSettings = {
+                            val intent = android.content.Intent(
+                                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                android.net.Uri.fromParts("package", packageName, null)
+                            )
+                            startActivity(intent)
+                        },
+                        onSettingsClick = { showSettings = true }
+                    )
                 }
             }
         }
@@ -110,7 +124,9 @@ class MainActivity : ComponentActivity() {
         val wanted = listOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.RECORD_AUDIO
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.BODY_SENSORS,
+            Manifest.permission.ACTIVITY_RECOGNITION
         )
         val missing = wanted.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
@@ -132,23 +148,37 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun WearHome(bridge: WearSensorBridge, onSettingsClick: () -> Unit) {
+fun WearHome(bridge: WearSensorBridge, onRequestPermissions: () -> Unit, onOpenSettings: () -> Unit, onSettingsClick: () -> Unit) {
     val isRunning by bridge.isRunning.collectAsState()
     val logs by bridge.logs.collectAsState()
     val listState = rememberTransformingLazyColumnState()
     val context = LocalContext.current
     var permissionsHint by remember { mutableStateOf("") }
 
-    DisposableEffect(context) {
-        permissionsHint = buildString {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                append("GPS permission missing. ")
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, context) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                permissionsHint = buildString {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        append("GPS permission missing. ")
+                    }
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                        append("Microphone permission missing. ")
+                    }
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.BODY_SENSORS) != PackageManager.PERMISSION_GRANTED) {
+                        append("Body sensors permission missing. ")
+                    }
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
+                        append("Activity recognition permission missing.")
+                    }
+                }.trim()
             }
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                append("Microphone permission missing.")
-            }
-        }.trim()
-        onDispose { }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     AppScaffold {
@@ -181,12 +211,17 @@ fun WearHome(bridge: WearSensorBridge, onSettingsClick: () -> Unit) {
                 }
                 if (permissionsHint.isNotBlank()) {
                     item {
-                        Card(onClick = { }) {
+                        Card(onClick = onRequestPermissions) {
                             Text(
-                                text = permissionsHint,
+                                text = permissionsHint + "\nTap to request permission",
                                 modifier = Modifier.fillMaxWidth().padding(10.dp),
                                 textAlign = TextAlign.Center
                             )
+                        }
+                    }
+                    item {
+                        Button(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
+                            Text("Open OS Settings")
                         }
                     }
                 }
@@ -323,6 +358,6 @@ fun WearSettings(bridge: WearSensorBridge, settings: SettingsManager, onBack: ()
 @Composable
 fun DefaultPreview() {
     WeaROS2Theme {
-        WearHome(WearSensorBridge(androidx.compose.ui.platform.LocalContext.current)) {}
+        WearHome(WearSensorBridge(androidx.compose.ui.platform.LocalContext.current), {}, {}) {}
     }
 }
