@@ -8,13 +8,13 @@ import androidx.health.services.client.data.DataPointContainer
 import androidx.health.services.client.data.DataType
 import androidx.health.services.client.data.PassiveListenerConfig
 import com.jros2.wearos2.SettingsManager
-import com.jros2.wearos2.ros.sensors.BloodOxygenSensor
+import com.jros2.wearos2.ros.sensors.AudioPlayerSensor
 import com.jros2.wearos2.ros.sensors.FloorsSensor
 import com.jros2.wearos2.ros.sensors.GpsSensor
-import com.jros2.wearos2.ros.sensors.HeartRateSensor
 import com.jros2.wearos2.ros.sensors.ImuSensor
 import com.jros2.wearos2.ros.sensors.MicrophoneSensor
 import com.jros2.wearos2.ros.sensors.StepsSensor
+import com.jros2.wearos2.ros.sensors.samsung.SamsungPpgSensor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,10 +35,10 @@ class WearSensorBridge(private val context: Context) {
         ImuSensor(),
         GpsSensor(),
         MicrophoneSensor(),
-        HeartRateSensor(),
-        BloodOxygenSensor(),
+        SamsungPpgSensor(),
         StepsSensor(),
-        FloorsSensor()
+        FloorsSensor(),
+        AudioPlayerSensor()
     )
 
     private val _isRunning = MutableStateFlow(false)
@@ -90,10 +90,10 @@ class WearSensorBridge(private val context: Context) {
                                 is GpsSensor -> sensor.resolvedTopicName = fullTopic
                                 is ImuSensor -> sensor.resolvedTopicName = fullTopic
                                 is MicrophoneSensor -> sensor.resolvedTopicName = fullTopic
-                                is HeartRateSensor -> sensor.resolvedTopicName = fullTopic
-                                is BloodOxygenSensor -> sensor.resolvedTopicName = fullTopic
+                                is SamsungPpgSensor -> sensor.resolvedTopicName = fullTopic
                                 is StepsSensor -> sensor.resolvedTopicName = fullTopic
                                 is FloorsSensor -> sensor.resolvedTopicName = fullTopic
+                                is AudioPlayerSensor -> sensor.resolvedTopicName = fullTopic
                             }
                             sensor.start(node, context)
                             log("${sensor.name} active on $fullTopic")

@@ -91,6 +91,7 @@ dependencies {
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.tooling)
     debugImplementation(libs.ui.test.manifest)
+    implementation(files("libs/samsung-health-sensor-api-1.4.1.aar"))
 }
 
 configurations.all {
