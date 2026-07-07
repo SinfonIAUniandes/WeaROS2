@@ -41,10 +41,21 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import kotlin.math.min
+import kotlin.math.sqrt
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.lifecycle.Lifecycle
@@ -74,14 +85,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             WeaROS2Theme {
                 var showSettings by remember { mutableStateOf(false) }
-                if (showSettings) {
-                    WearSettings(bridge, settings) {
+                var showJoystick by remember { mutableStateOf(false) }
+                when {
+                    showSettings -> WearSettings(bridge, settings) {
                         // On save/back
                         if (bridge.isRunning.value) bridge.stop()
                         showSettings = false
                     }
-                } else {
-                    WearHome(
+                    showJoystick -> JoystickScreen(bridge.joystick) { showJoystick = false }
+                    else -> WearHome(
                         bridge = bridge,
                         onRequestPermissions = { requestRuntimePermissions() },
                         onOpenSettings = {
@@ -91,7 +103,13 @@ class MainActivity : ComponentActivity() {
                             )
                             startActivity(intent)
                         },
-                        onSettingsClick = { showSettings = true }
+                        onSettingsClick = { showSettings = true },
+                        onJoystickClick = {
+                            // The joystick publishes on the shared ROS2 node, so make
+                            // sure the bridge is running before opening the control.
+                            if (!bridge.isRunning.value) bridge.start()
+                            showJoystick = true
+                        }
                     )
                 }
             }
@@ -151,7 +169,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun WearHome(bridge: WearSensorBridge, onRequestPermissions: () -> Unit, onOpenSettings: () -> Unit, onSettingsClick: () -> Unit) {
+fun WearHome(bridge: WearSensorBridge, onRequestPermissions: () -> Unit, onOpenSettings: () -> Unit, onSettingsClick: () -> Unit, onJoystickClick: () -> Unit) {
     val isRunning by bridge.isRunning.collectAsState()
     val logs by bridge.logs.collectAsState()
     val listState = rememberTransformingLazyColumnState()
@@ -213,6 +231,14 @@ fun WearHome(bridge: WearSensorBridge, onRequestPermissions: () -> Unit, onOpenS
                         Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
                             Text(if (isRunning) "Stop bridge" else "Start bridge")
                             Text(if (isRunning) "Publishing ROS2" else "Idle")
+                        }
+                    }
+                }
+                item {
+                    Card(onClick = onJoystickClick) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
+                            Text("Joystick")
+                            Text("Full-screen touch control")
                         }
                     }
                 }
@@ -360,11 +386,79 @@ fun WearSettings(bridge: WearSensorBridge, settings: SettingsManager, onBack: ()
     }
 }
 
+@Composable
+fun JoystickScreen(joystick: com.jros2.wearos2.ros.sensors.JoystickController, onExit: () -> Unit) {
+    val value by joystick.displayValue.collectAsState()
+    val count by joystick.messageCount.collectAsState()
+    var thumb by remember { mutableStateOf(Offset.Zero) }
+    var center by remember { mutableStateOf(Offset.Zero) }
+    var radius by remember { mutableStateOf(0f) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .onSizeChanged { size ->
+                center = Offset(size.width / 2f, size.height / 2f)
+                radius = (min(size.width, size.height) / 2f) * 0.85f
+            }
+            .pointerInput(center, radius) {
+                if (radius <= 0f) return@pointerInput
+                awaitEachGesture {
+                    fun handle(pos: Offset) {
+                        val rawX = pos.x - center.x
+                        val rawY = pos.y - center.y
+                        val dist = sqrt(rawX * rawX + rawY * rawY)
+                        val scale = if (dist > radius && dist > 0f) radius / dist else 1f
+                        val cx = rawX * scale
+                        val cy = rawY * scale
+                        thumb = Offset(cx, cy)
+                        val nx = (cx / radius).coerceIn(-1f, 1f)
+                        val ny = (-cy / radius).coerceIn(-1f, 1f) // screen Y is down; invert so up is positive
+                        joystick.publishAxes(nx, ny)
+                    }
+                    val down = awaitFirstDown()
+                    handle(down.position)
+                    down.consume()
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull() ?: break
+                        if (!change.pressed) break
+                        handle(change.position)
+                        change.consume()
+                    }
+                    // Released: recenter and tell the consumer to stop.
+                    thumb = Offset.Zero
+                    joystick.publishAxes(0f, 0f)
+                }
+            }
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val c = Offset(size.width / 2f, size.height / 2f)
+            val r = if (radius > 0f) radius else (min(size.width, size.height) / 2f) * 0.85f
+            drawCircle(color = Color(0xFF1E1E1E), radius = r, center = c)
+            drawCircle(color = Color(0xFF555555), radius = r, center = c, style = Stroke(width = 4f))
+            drawCircle(color = Color(0xFF4FC3F7), radius = r * 0.28f, center = Offset(c.x + thumb.x, c.y + thumb.y))
+        }
+        Button(
+            onClick = onExit,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 2.dp)
+        ) {
+            Text("Exit")
+        }
+        Text(
+            text = "$value · $count",
+            color = Color.White,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp)
+        )
+    }
+}
+
 @WearPreviewDevices
 @WearPreviewFontScales
 @Composable
 fun DefaultPreview() {
     WeaROS2Theme {
-        WearHome(WearSensorBridge(androidx.compose.ui.platform.LocalContext.current), {}, {}) {}
+        WearHome(WearSensorBridge(androidx.compose.ui.platform.LocalContext.current), {}, {}, {}) {}
     }
 }

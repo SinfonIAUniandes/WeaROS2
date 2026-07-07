@@ -24,7 +24,13 @@ It also runs receivers in the other direction — subscribing to topics and acti
 | Speaker | `play_audio` | `audio_common_msgs/AudioData` | Subscribes and plays incoming audio; expects the same 16kHz mono PCM16 wire format `Mic` publishes (an optional one-off 44-byte WAV header message is auto-detected and skipped) |
 | Notify | `notify` | `std_msgs/String` | Pops up an Android heads-up notification for every message; the published string becomes the notification text. Requires the POST_NOTIFICATIONS permission (requested at runtime on Wear OS 5). Trigger it with `ros2 topic pub --once /watch/notify std_msgs/String "{data: 'Hello watch'}"` |
 
-Topics are published/subscribed under a configurable namespace (default `watch`, e.g. `/watch/imu`), and each sensor/receiver's topic name can be overridden individually from in-app Settings, along with the ROS 2 domain ID.
+And a **Joystick** button on the home screen turns the whole watch face into a touch joystick that publishes `sensor_msgs/Joy` to the `joy` topic while held:
+
+| Control | Default topic | Type | Notes |
+|---|---|---|---|
+| Joystick | `joy` | `sensor_msgs/Joy` | `axes[0]` = X (right positive), `axes[1]` = Y (up positive), each normalized to [-1, 1]. Publishes on every touch move and once with (0, 0) on release. Opening it auto-starts the bridge; tap **Exit** to return. |
+
+Topics are published/subscribed under a configurable namespace (default `watch`, e.g. `/watch/imu`), and each sensor/receiver/control's topic name can be overridden individually from in-app Settings, along with the ROS 2 domain ID.
 
 From the watch face:
 - Toggle individual sensors on/off

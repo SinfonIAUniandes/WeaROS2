@@ -12,6 +12,7 @@ import com.jros2.wearos2.ros.sensors.AudioPlayerSensor
 import com.jros2.wearos2.ros.sensors.FloorsSensor
 import com.jros2.wearos2.ros.sensors.GpsSensor
 import com.jros2.wearos2.ros.sensors.ImuSensor
+import com.jros2.wearos2.ros.sensors.JoystickController
 import com.jros2.wearos2.ros.sensors.MicrophoneSensor
 import com.jros2.wearos2.ros.sensors.NotificationSensor
 import com.jros2.wearos2.ros.sensors.StepsSensor
@@ -32,6 +33,8 @@ class WearSensorBridge(private val context: Context) {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var rosNode: ROS2Node? = null
 
+    val joystick = JoystickController()
+
     val sensors = listOf(
         ImuSensor(),
         GpsSensor(),
@@ -40,7 +43,8 @@ class WearSensorBridge(private val context: Context) {
         StepsSensor(),
         FloorsSensor(),
         AudioPlayerSensor(),
-        NotificationSensor()
+        NotificationSensor(),
+        joystick
     )
 
     private val _isRunning = MutableStateFlow(false)
@@ -97,6 +101,7 @@ class WearSensorBridge(private val context: Context) {
                                 is FloorsSensor -> sensor.resolvedTopicName = fullTopic
                                 is AudioPlayerSensor -> sensor.resolvedTopicName = fullTopic
                                 is NotificationSensor -> sensor.resolvedTopicName = fullTopic
+                                is JoystickController -> sensor.resolvedTopicName = fullTopic
                             }
                             sensor.start(node, context)
                             log("${sensor.name} active on $fullTopic")
