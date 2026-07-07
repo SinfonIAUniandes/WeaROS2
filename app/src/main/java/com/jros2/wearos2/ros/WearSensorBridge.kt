@@ -34,12 +34,13 @@ class WearSensorBridge(private val context: Context) {
     private var rosNode: ROS2Node? = null
 
     val joystick = JoystickController()
+    val samsung = SamsungPpgSensor()
 
     val sensors = listOf(
         ImuSensor(),
         GpsSensor(),
         MicrophoneSensor(),
-        SamsungPpgSensor(),
+        samsung,
         StepsSensor(),
         FloorsSensor(),
         AudioPlayerSensor(),

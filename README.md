@@ -13,7 +13,7 @@ The app runs a foreground `ROS2Node` on the watch and publishes each enabled sen
 | IMU | `imu` | Accelerometer/gyro |
 | GPS | `gps` | Requires location permission |
 | Mic | `audio` | Requires microphone permission |
-| Samsung SpO2 & Heart Rate | `samsung_health` | Uses Samsung Health Sensor API |
+| Samsung SpO2 & Heart Rate | `samsung_health/heart_rate`, `samsung_health/spo2` | Uses the Samsung Health Sensor API. Heart rate streams continuously (`mobile_sensor_msgs/SamsungHealthHeartRate`). SpO2 (`mobile_sensor_msgs/SamsungHealthSpO2`) is a one-shot on-demand measurement started from the **Measure SpO2** button on the home screen — hold your wrist still until it completes (or times out after 35 s). Needs the `android.permission.health.READ_HEART_RATE` / `READ_OXYGEN_SATURATION` permissions on Android 16, and Health Platform dev mode enabled on the watch |
 | Daily Steps | `steps_daily` | Via Health Services passive monitoring |
 | Daily Floors | `floors_daily` | Via Health Services passive monitoring |
 
@@ -62,7 +62,9 @@ This app links `jros2`'s native Fast-DDS libraries (`armeabi-v7a` and `arm64-v8a
 
 ## Permissions
 
-Requested at runtime: fine/coarse location, record audio, body sensors, activity recognition. Also declared: network/Wi-Fi state, multicast, wake lock, and background body sensors.
+Requested at runtime: fine/coarse location, record audio, body sensors, activity recognition, notifications (Android 13+), and — on Android 16 (Baklava) — the granular `health.READ_HEART_RATE` / `health.READ_OXYGEN_SATURATION` permissions that the Samsung Health Sensor API now requires instead of `BODY_SENSORS`. Also declared: network/Wi-Fi state, multicast, wake lock, and background body sensors.
+
+For the Samsung heart-rate/SpO2 sensor to deliver data you must also enable **Health Platform developer mode** on the watch: Settings → Apps → Health Platform, then tap the "Health Platform" title ~10 times until `[Dev mode]` appears.
 
 ## Project structure
 

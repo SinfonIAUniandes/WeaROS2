@@ -148,6 +148,12 @@ class MainActivity : ComponentActivity() {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
                 add(Manifest.permission.POST_NOTIFICATIONS)
             }
+            // Android 16 (Baklava, API 36) replaced BODY_SENSORS with granular Health
+            // permissions, which the Samsung Health Sensor API requires for HR/SpO2.
+            if (android.os.Build.VERSION.SDK_INT >= 36) {
+                add("android.permission.health.READ_HEART_RATE")
+                add("android.permission.health.READ_OXYGEN_SATURATION")
+            }
         }
         val missing = wanted.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
@@ -239,6 +245,23 @@ fun WearHome(bridge: WearSensorBridge, onRequestPermissions: () -> Unit, onOpenS
                         Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
                             Text("Joystick")
                             Text("Full-screen touch control")
+                        }
+                    }
+                }
+                item {
+                    val spo2Measuring by bridge.samsung.spo2Measuring.collectAsState()
+                    val spo2Result by bridge.samsung.spo2Result.collectAsState()
+                    Card(onClick = { if (isRunning && !spo2Measuring) bridge.samsung.measureSpo2() }) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
+                            Text("Measure SpO2")
+                            Text(spo2Result)
+                            Text(
+                                when {
+                                    !isRunning -> "Start bridge first"
+                                    spo2Measuring -> "Measuring…"
+                                    else -> "Tap and hold your wrist still"
+                                }
+                            )
                         }
                     }
                 }
