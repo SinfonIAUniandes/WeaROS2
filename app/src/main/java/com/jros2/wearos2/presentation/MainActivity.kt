@@ -121,13 +121,16 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestRuntimePermissions() {
-        val wanted = listOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.RECORD_AUDIO,
-            Manifest.permission.BODY_SENSORS,
-            Manifest.permission.ACTIVITY_RECOGNITION
-        )
+        val wanted = buildList {
+            add(Manifest.permission.ACCESS_FINE_LOCATION)
+            add(Manifest.permission.ACCESS_COARSE_LOCATION)
+            add(Manifest.permission.RECORD_AUDIO)
+            add(Manifest.permission.BODY_SENSORS)
+            add(Manifest.permission.ACTIVITY_RECOGNITION)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
         val missing = wanted.filter {
             ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
         }
@@ -170,7 +173,11 @@ fun WearHome(bridge: WearSensorBridge, onRequestPermissions: () -> Unit, onOpenS
                         append("Body sensors permission missing. ")
                     }
                     if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) != PackageManager.PERMISSION_GRANTED) {
-                        append("Activity recognition permission missing.")
+                        append("Activity recognition permission missing. ")
+                    }
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU &&
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        append("Notification permission missing.")
                     }
                 }.trim()
             }

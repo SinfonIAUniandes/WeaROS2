@@ -17,11 +17,12 @@ The app runs a foreground `ROS2Node` on the watch and publishes each enabled sen
 | Daily Steps | `steps_daily` | Via Health Services passive monitoring |
 | Daily Floors | `floors_daily` | Via Health Services passive monitoring |
 
-It also runs one receiver in the other direction — subscribing to an audio topic and playing it through the watch speaker:
+It also runs receivers in the other direction — subscribing to topics and acting on the watch:
 
-| Receiver | Default topic | Notes |
-|---|---|---|
-| Speaker | `play_audio` | Subscribes and plays incoming audio; expects the same 16kHz mono PCM16 wire format `Mic` publishes (an optional one-off 44-byte WAV header message is auto-detected and skipped) |
+| Receiver | Default topic | Type | Notes |
+|---|---|---|---|
+| Speaker | `play_audio` | `audio_common_msgs/AudioData` | Subscribes and plays incoming audio; expects the same 16kHz mono PCM16 wire format `Mic` publishes (an optional one-off 44-byte WAV header message is auto-detected and skipped) |
+| Notify | `notify` | `std_msgs/String` | Pops up an Android heads-up notification for every message; the published string becomes the notification text. Requires the POST_NOTIFICATIONS permission (requested at runtime on Wear OS 5). Trigger it with `ros2 topic pub --once /watch/notify std_msgs/String "{data: 'Hello watch'}"` |
 
 Topics are published/subscribed under a configurable namespace (default `watch`, e.g. `/watch/imu`), and each sensor/receiver's topic name can be overridden individually from in-app Settings, along with the ROS 2 domain ID.
 
@@ -64,6 +65,6 @@ app/src/main/java/com/jros2/wearos2/
 ├── presentation/        # Compose UI (MainActivity, home & settings screens, theme)
 ├── ros/
 │   ├── WearSensorBridge.kt   # Owns the ROS2Node, starts/stops sensors
-│   └── sensors/              # One class per sensor/receiver (IMU, GPS, mic, steps, floors, Samsung PPG, speaker playback)
+│   └── sensors/              # One class per sensor/receiver (IMU, GPS, mic, steps, floors, Samsung PPG, speaker playback, notifications)
 └── SettingsManager.kt   # Persists domain ID, namespace, and per-sensor topic names
 ```

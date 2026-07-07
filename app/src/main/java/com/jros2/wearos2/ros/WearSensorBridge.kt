@@ -13,6 +13,7 @@ import com.jros2.wearos2.ros.sensors.FloorsSensor
 import com.jros2.wearos2.ros.sensors.GpsSensor
 import com.jros2.wearos2.ros.sensors.ImuSensor
 import com.jros2.wearos2.ros.sensors.MicrophoneSensor
+import com.jros2.wearos2.ros.sensors.NotificationSensor
 import com.jros2.wearos2.ros.sensors.StepsSensor
 import com.jros2.wearos2.ros.sensors.samsung.SamsungPpgSensor
 import kotlinx.coroutines.CoroutineScope
@@ -38,7 +39,8 @@ class WearSensorBridge(private val context: Context) {
         SamsungPpgSensor(),
         StepsSensor(),
         FloorsSensor(),
-        AudioPlayerSensor()
+        AudioPlayerSensor(),
+        NotificationSensor()
     )
 
     private val _isRunning = MutableStateFlow(false)
@@ -94,6 +96,7 @@ class WearSensorBridge(private val context: Context) {
                                 is StepsSensor -> sensor.resolvedTopicName = fullTopic
                                 is FloorsSensor -> sensor.resolvedTopicName = fullTopic
                                 is AudioPlayerSensor -> sensor.resolvedTopicName = fullTopic
+                                is NotificationSensor -> sensor.resolvedTopicName = fullTopic
                             }
                             sensor.start(node, context)
                             log("${sensor.name} active on $fullTopic")
