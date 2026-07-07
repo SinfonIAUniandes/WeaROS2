@@ -1,6 +1,6 @@
 # WeaROS2
 
-A Wear OS app that turns a smartwatch into a ROS 2 node, publishing its onboard sensors directly onto a ROS 2 network over Wi-Fi using [jros2](https://github.com/ihmcrobotics/jros2) (Fast-DDS).
+A Wear OS app that turns a smartwatch into a ROS 2 node, publishing its onboard sensors directly onto a ROS 2 network over Wi-Fi using the fork [SinfonIAUniandes/jros2](https://github.com/SinfonIAUniandes/jros2), forked from [ihmcrobotics/jros2](https://github.com/ihmcrobotics/jros2) (Fast-DDS).
 
 Tested on a Samsung Galaxy Watch 7 running Wear OS 5.
 
