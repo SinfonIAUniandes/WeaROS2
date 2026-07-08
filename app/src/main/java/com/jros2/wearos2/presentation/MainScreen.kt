@@ -11,10 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -24,24 +22,33 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.rotary.onRotaryScrollEvent
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.wear.compose.material3.Text
 import com.jros2.wearos2.ros.WearSensorBridge
+import kotlin.math.PI
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.sin
+import kotlin.math.sqrt
+
+private val TWO_PI = (2.0 * PI).toFloat()
 
 /**
- * The home screen. Everything the app is about is one tap away: a big central start/stop
- * button, quick icons to the sub-screens, a momentary publish button, and an integrated
- * value slider. While the slider is being dragged (or the rotating bezel is turned) the
- * other buttons are blocked to avoid mis-taps.
+ * Home screen. Controls sit centered; the value slider is a ring hugging the watch edge
+ * (drag it or turn the bezel) so it never pushes the layout around. Touching the ring
+ * blocks the center buttons until you let go, to avoid mis-taps.
  */
 @Composable
 fun MainScreen(
@@ -55,50 +62,114 @@ fun MainScreen(
 ) {
     val running by bridge.isRunning.collectAsState()
     val sliderValue by bridge.slider.value.collectAsState()
-    var sliderActive by remember { mutableStateOf(false) }
+    var ringActive by remember { mutableStateOf(false) }
+    var center by remember { mutableStateOf(Offset.Zero) }
+    var radiusPx by remember { mutableStateOf(0f) }
 
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    fun setFromPosition(pos: Offset) {
+        var theta = atan2(pos.x - center.x, -(pos.y - center.y)) // 0 at top, clockwise
+        if (theta < 0f) theta += TWO_PI
+        bridge.slider.setValue(theta / TWO_PI)
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(AppColors.Background)
+            .onSizeChanged {
+                center = Offset(it.width / 2f, it.height / 2f)
+                radiusPx = min(it.width, it.height) / 2f
+            }
             .onRotaryScrollEvent { event ->
                 bridge.slider.setValue(bridge.slider.value.value + event.verticalScrollPixels / 2000f)
                 true
             }
             .focusRequester(focusRequester)
-            .focusable(),
+            .focusable()
+            // Ring gesture lives on the parent: buttons (children) consume their own taps
+            // first, so this only fires for un-consumed touches out at the edge.
+            .pointerInput(center, radiusPx) {
+                if (radiusPx <= 0f) return@pointerInput
+                val bandInner = radiusPx * 0.70f
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = true)
+                    val dx = down.position.x - center.x
+                    val dy = down.position.y - center.y
+                    if (sqrt(dx * dx + dy * dy) < bandInner) return@awaitEachGesture // center, ignore
+                    ringActive = true
+                    down.consume()
+                    setFromPosition(down.position)
+                    while (true) {
+                        val e = awaitPointerEvent()
+                        val ch = e.changes.firstOrNull() ?: break
+                        if (!ch.pressed) break
+                        setFromPosition(ch.position)
+                        ch.consume()
+                    }
+                    ringActive = false
+                }
+            },
     ) {
-        // Controls, kept clear of the slider strip at the bottom.
+        // The slider ring around the edge.
+        Canvas(Modifier.fillMaxSize()) {
+            val sw = AppDimens.RingWidth.toPx()
+            val r = min(size.width, size.height) / 2f - sw / 2f - 2f
+            val c = Offset(size.width / 2f, size.height / 2f)
+            drawCircle(AppColors.SurfaceVariant, radius = r, center = c, style = Stroke(sw))
+            drawArc(
+                color = AppColors.Primary,
+                startAngle = -90f,
+                sweepAngle = sliderValue * 360f,
+                useCenter = false,
+                topLeft = Offset(c.x - r, c.y - r),
+                size = Size(r * 2f, r * 2f),
+                style = Stroke(width = sw, cap = StrokeCap.Round),
+            )
+            val a = sliderValue * TWO_PI
+            drawCircle(AppColors.OnSurface, radius = sw * 0.85f, center = Offset(c.x + sin(a) * r, c.y - cos(a) * r))
+        }
+
+        // Centered controls.
         Column(
-            modifier = Modifier.fillMaxSize().padding(bottom = 34.dp),
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                GlyphButton(onClick = onSettings, diameter = 38.dp) { glyphTune(it) }
-                GlyphButton(onClick = onLogs, diameter = 38.dp) { glyphList(it) }
+                GlyphButton(onClick = onSettings, diameter = AppDimens.SmallIcon) { glyphTune(it) }
+                GlyphButton(onClick = onLogs, diameter = AppDimens.SmallIcon) { glyphLogs(it) }
             }
             Spacer(Modifier.height(6.dp))
             HeroButton(running = running, onClick = { if (running) onStopBridge() else onStartBridge() })
             Spacer(Modifier.height(6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                GlyphButton(onClick = onJoystick, diameter = 42.dp) { glyphJoystick(it) }
+                GlyphButton(onClick = onJoystick) { glyphJoystick(it) }
                 GlyphButton(
                     onClick = { bridge.button.press() },
-                    diameter = 42.dp,
                     enabled = running,
-                    background = AppColors.Accent,
-                    tint = Color.Black,
-                ) { glyphPlus(it) }
-                GlyphButton(onClick = onSpo2, diameter = 42.dp) { glyphHeart(it) }
+                    background = AppColors.Primary,
+                    tint = AppColors.OnPrimary,
+                ) { glyphPing(it) }
+                GlyphButton(onClick = onSpo2) { glyphHeart(it) }
             }
         }
 
-        // Scrim that eats stray touches over the controls while the slider is in use.
-        if (sliderActive) {
+        // Live value, shown only while adjusting the ring, so the resting screen stays clean.
+        if (ringActive) {
+            Text(
+                text = "${(sliderValue * 100f).toInt()}%",
+                color = AppColors.Primary,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 18.dp),
+            )
+        }
+
+        // Block center buttons while the ring is in use.
+        if (ringActive) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
@@ -110,66 +181,6 @@ fun MainScreen(
                             }
                         }
                     },
-            )
-        }
-
-        // Integrated slider — drawn last so it stays above the scrim and keeps receiving input.
-        MainSlider(
-            value = sliderValue,
-            onValue = { bridge.slider.setValue(it) },
-            onActiveChange = { sliderActive = it },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth(0.68f)
-                .height(24.dp)
-                .padding(bottom = 8.dp),
-        )
-    }
-}
-
-@Composable
-private fun MainSlider(
-    value: Float,
-    onValue: (Float) -> Unit,
-    onActiveChange: (Boolean) -> Unit,
-    modifier: Modifier,
-) {
-    var width by remember { mutableStateOf(1f) }
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(50))
-            .background(AppColors.Surface)
-            .onSizeChanged { width = it.width.toFloat().coerceAtLeast(1f) }
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    val down = awaitFirstDown()
-                    onActiveChange(true)
-                    onValue((down.position.x / width).coerceIn(0f, 1f))
-                    down.consume()
-                    while (true) {
-                        val e = awaitPointerEvent()
-                        val ch = e.changes.firstOrNull() ?: break
-                        if (!ch.pressed) break
-                        onValue((ch.position.x / width).coerceIn(0f, 1f))
-                        ch.consume()
-                    }
-                    onActiveChange(false)
-                }
-            },
-    ) {
-        Canvas(Modifier.fillMaxSize()) {
-            val h = size.height
-            val fillW = size.width * value
-            drawRoundRect(
-                AppColors.Accent,
-                topLeft = Offset(0f, 0f),
-                size = Size(fillW, h),
-                cornerRadius = CornerRadius(h / 2f),
-            )
-            drawCircle(
-                Color.White,
-                radius = h * 0.42f,
-                center = Offset(fillW.coerceIn(h * 0.42f, size.width - h * 0.42f), h / 2f),
             )
         }
     }

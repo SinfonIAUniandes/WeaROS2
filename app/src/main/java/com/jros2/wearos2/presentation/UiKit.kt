@@ -21,15 +21,28 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** App-wide dark palette. Kept small so the whole UI shares one look. */
+/**
+ * The single source of truth for colors. Every screen references these semantic roles
+ * (never raw hex), so restyling the whole app is a matter of editing this one object.
+ */
 object AppColors {
-    val Background = Color(0xFF0E0F12)
-    val Surface = Color(0xFF23262E)
-    val Accent = Color(0xFF4FC3F7)
-    val Start = Color(0xFF35C77A)
-    val Stop = Color(0xFFEF5350)
-    val OnSurface = Color(0xFFECEFF3)
-    val Muted = Color(0xFF868C97)
+    val Background = Color(0xFF0F1216)     // app background
+    val Surface = Color(0xFF1C212A)        // idle buttons, cards, input fields
+    val SurfaceVariant = Color(0xFF2C323D) // ring track, dividers, raised surfaces
+    val Primary = Color(0xFF5AC8FA)        // the one accent: interactive / value
+    val OnPrimary = Color(0xFF04222E)      // content on top of Primary
+    val Start = Color(0xFF35C759)          // hero when idle (go)
+    val Stop = Color(0xFFFF5A5A)           // hero when publishing (stop)
+    val OnSurface = Color(0xFFE8ECF2)      // primary text / icons
+    val Muted = Color(0xFF8A92A0)          // secondary text
+}
+
+/** Shared sizes, kept here so spacing/scale is tuned in one place. */
+object AppDimens {
+    val Hero = 88.dp
+    val NavIcon = 42.dp
+    val SmallIcon = 38.dp
+    val RingWidth = 10.dp
 }
 
 /** A round icon button whose icon is drawn by [glyph] (see the glyph* helpers below). */
@@ -37,7 +50,7 @@ object AppColors {
 fun GlyphButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    diameter: Dp = 46.dp,
+    diameter: Dp = AppDimens.NavIcon,
     background: Color = AppColors.Surface,
     tint: Color = AppColors.OnSurface,
     enabled: Boolean = true,
@@ -58,7 +71,12 @@ fun GlyphButton(
 
 /** The big central start/stop button — green play when idle, red stop when publishing. */
 @Composable
-fun HeroButton(running: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier, diameter: Dp = 88.dp) {
+fun HeroButton(
+    running: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    diameter: Dp = AppDimens.Hero,
+) {
     Box(
         modifier
             .size(diameter)
@@ -68,7 +86,7 @@ fun HeroButton(running: Boolean, onClick: () -> Unit, modifier: Modifier = Modif
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.size(diameter * 0.38f)) {
-            if (running) glyphStop(Color.White) else glyphPlay(Color.White)
+            if (running) glyphStop(AppColors.OnSurface) else glyphPlay(AppColors.OnSurface)
         }
     }
 }
@@ -98,20 +116,13 @@ fun DrawScope.glyphStop(color: Color) {
     )
 }
 
-fun DrawScope.glyphPlus(color: Color) {
-    val t = size.minDimension * 0.2f
-    drawRoundRect(
-        color,
-        topLeft = Offset(size.width / 2f - t / 2f, size.height * 0.06f),
-        size = Size(t, size.height * 0.88f),
-        cornerRadius = CornerRadius(t / 2f),
-    )
-    drawRoundRect(
-        color,
-        topLeft = Offset(size.width * 0.06f, size.height / 2f - t / 2f),
-        size = Size(size.width * 0.88f, t),
-        cornerRadius = CornerRadius(t / 2f),
-    )
+/** Publish trigger — a broadcast "ping": a dot emitting concentric waves. */
+fun DrawScope.glyphPing(color: Color) {
+    val c = center
+    val d = size.minDimension
+    drawCircle(color, radius = d * 0.12f, center = c)
+    drawCircle(color, radius = d * 0.28f, center = c, style = Stroke(width = d * 0.08f))
+    drawCircle(color, radius = d * 0.44f, center = c, style = Stroke(width = d * 0.08f))
 }
 
 /** Settings — three horizontal "tune" sliders with knobs. */
@@ -126,13 +137,20 @@ fun DrawScope.glyphTune(color: Color) {
     }
 }
 
-/** Logs — bulleted list. */
-fun DrawScope.glyphList(color: Color) {
-    val t = size.height * 0.12f
-    listOf(0.24f, 0.5f, 0.76f).forEach { ry ->
-        val y = size.height * ry
-        drawCircle(color, radius = t * 0.8f, center = Offset(t * 0.8f, y))
-        drawLine(color, Offset(t * 2.6f, y), Offset(size.width, y), strokeWidth = t, cap = StrokeCap.Round)
+/** Logs — a document page with text lines (distinct from the settings glyph). */
+fun DrawScope.glyphLogs(color: Color) {
+    val w = size.width
+    val h = size.height
+    val sw = size.minDimension * 0.09f
+    drawRoundRect(
+        color,
+        topLeft = Offset(w * 0.16f, h * 0.05f),
+        size = Size(w * 0.68f, h * 0.9f),
+        cornerRadius = CornerRadius(w * 0.1f),
+        style = Stroke(width = sw),
+    )
+    listOf(0.32f, 0.5f, 0.68f).forEach { ry ->
+        drawLine(color, Offset(w * 0.32f, h * ry), Offset(w * 0.68f, h * ry), strokeWidth = sw, cap = StrokeCap.Round)
     }
 }
 

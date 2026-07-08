@@ -18,7 +18,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.KeyboardType
@@ -67,28 +66,28 @@ fun WearSettings(bridge: WearSensorBridge, settings: SettingsManager, onBack: ()
                 }
                 item {
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                        Text("Domain ID", color = Color.Gray)
+                        Text("Domain ID", color = AppColors.Muted)
                         BasicTextField(
                             value = domainId,
                             onValueChange = { domainId = it },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
-                            textStyle = TextStyle(color = Color.White),
-                            cursorBrush = SolidColor(Color.White),
-                            modifier = Modifier.fillMaxWidth().background(Color.DarkGray, RoundedCornerShape(8.dp)).padding(10.dp)
+                            textStyle = TextStyle(color = AppColors.OnSurface),
+                            cursorBrush = SolidColor(AppColors.OnSurface),
+                            modifier = Modifier.fillMaxWidth().background(AppColors.Surface, RoundedCornerShape(8.dp)).padding(10.dp)
                         )
                     }
                 }
                 item {
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                        Text("Namespace", color = Color.Gray)
+                        Text("Namespace", color = AppColors.Muted)
                         BasicTextField(
                             value = namespace,
                             onValueChange = { namespace = it },
                             singleLine = true,
-                            textStyle = TextStyle(color = Color.White),
-                            cursorBrush = SolidColor(Color.White),
-                            modifier = Modifier.fillMaxWidth().background(Color.DarkGray, RoundedCornerShape(8.dp)).padding(10.dp)
+                            textStyle = TextStyle(color = AppColors.OnSurface),
+                            cursorBrush = SolidColor(AppColors.OnSurface),
+                            modifier = Modifier.fillMaxWidth().background(AppColors.Surface, RoundedCornerShape(8.dp)).padding(10.dp)
                         )
                     }
                 }
@@ -116,9 +115,9 @@ fun WearSettings(bridge: WearSensorBridge, settings: SettingsManager, onBack: ()
                             onValueChange = { topicNames[sensor.id] = it },
                             singleLine = true,
                             enabled = enabled,
-                            textStyle = TextStyle(color = if (enabled) Color.White else Color.Gray),
-                            cursorBrush = SolidColor(Color.White),
-                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp).background(Color.DarkGray, RoundedCornerShape(8.dp)).padding(10.dp)
+                            textStyle = TextStyle(color = if (enabled) AppColors.OnSurface else AppColors.Muted),
+                            cursorBrush = SolidColor(AppColors.OnSurface),
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp).background(AppColors.Surface, RoundedCornerShape(8.dp)).padding(10.dp)
                         )
                     }
                 }

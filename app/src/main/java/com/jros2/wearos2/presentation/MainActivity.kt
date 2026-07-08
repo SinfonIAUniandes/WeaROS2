@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -48,6 +49,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             WeaROS2Theme {
                 var screen by remember { mutableStateOf<Screen>(Screen.Main) }
+                // Physical back / swipe-dismiss returns to the main screen from any sub-screen.
+                BackHandler(enabled = screen != Screen.Main) { screen = Screen.Main }
                 when (screen) {
                     Screen.Settings -> WearSettings(bridge, settings) {
                         if (bridge.isRunning.value) stopBridge()

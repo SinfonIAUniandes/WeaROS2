@@ -41,8 +41,8 @@ Topics are published/subscribed under a configurable namespace (default `watch`,
 A single, icon-driven home screen keeps the app focused on its one job:
 
 - **Big central button** starts/stops publishing (green play → red stop).
-- **Slider** along the bottom (drag it or turn the rotating bezel) publishes the `slider` value; while you're using it the other buttons are blocked to avoid mis-taps.
-- **Publish button** (the `+` icon) sends a one-off `button` message.
+- **Slider ring** hugging the watch edge (drag it or turn the rotating bezel) publishes the `slider` value; while you're using it the center buttons are blocked to avoid mis-taps.
+- **Publish button** (the broadcast icon) sends a one-off `button` message.
 - Icons open the sub-screens: **Joystick**, **SpO2** (a measurement screen with a progress ring), **Settings**, and **Logs**.
 
 **Settings** edits the domain id, namespace, and per-feature topic names, and has a toggle to enable/disable each feature — all persisted. **Logs** shows the rolling activity log.

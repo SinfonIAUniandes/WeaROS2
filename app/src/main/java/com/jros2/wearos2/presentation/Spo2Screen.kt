@@ -55,9 +55,9 @@ fun Spo2Screen(samsung: SamsungPpgSensor, onExit: () -> Unit) {
             val r = min(size.width, size.height) / 2f - 8f
             val topLeft = Offset(c.x - r, c.y - r)
             val arcSize = Size(r * 2f, r * 2f)
-            drawCircle(AppColors.Surface, radius = r, center = c, style = Stroke(width = 12f))
+            drawCircle(AppColors.SurfaceVariant, radius = r, center = c, style = Stroke(width = 12f))
             drawArc(
-                color = AppColors.Stop,
+                color = AppColors.Primary,
                 startAngle = -90f,
                 sweepAngle = (if (measuring) progress else 0f) * 360f,
                 useCenter = false,
@@ -84,7 +84,8 @@ fun Spo2Screen(samsung: SamsungPpgSensor, onExit: () -> Unit) {
             onClick = { samsung.measureSpo2() },
             diameter = 48.dp,
             enabled = !measuring,
-            background = AppColors.Stop,
+            background = AppColors.Primary,
+            tint = AppColors.OnPrimary,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp),
         ) { glyphHeart(it) }
     }

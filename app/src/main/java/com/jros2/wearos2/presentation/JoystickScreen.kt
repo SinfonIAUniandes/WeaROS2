@@ -16,12 +16,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
-import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.Text
 import com.jros2.wearos2.ros.sensors.JoystickController
 import kotlin.math.min
@@ -43,7 +41,7 @@ fun JoystickScreen(joystick: JoystickController, onExit: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black)
+            .background(AppColors.Background)
             .onSizeChanged { size ->
                 center = Offset(size.width / 2f, size.height / 2f)
                 radius = (min(size.width, size.height) / 2f) * 0.85f
@@ -82,19 +80,18 @@ fun JoystickScreen(joystick: JoystickController, onExit: () -> Unit) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             val c = Offset(size.width / 2f, size.height / 2f)
             val r = if (radius > 0f) radius else (min(size.width, size.height) / 2f) * 0.85f
-            drawCircle(color = Color(0xFF1E1E1E), radius = r, center = c)
-            drawCircle(color = Color(0xFF555555), radius = r, center = c, style = Stroke(width = 4f))
-            drawCircle(color = Color(0xFF4FC3F7), radius = r * 0.28f, center = Offset(c.x + thumb.x, c.y + thumb.y))
+            drawCircle(color = AppColors.Surface, radius = r, center = c)
+            drawCircle(color = AppColors.SurfaceVariant, radius = r, center = c, style = Stroke(width = 4f))
+            drawCircle(color = AppColors.Primary, radius = r * 0.28f, center = Offset(c.x + thumb.x, c.y + thumb.y))
         }
-        Button(
+        GlyphButton(
             onClick = onExit,
-            modifier = Modifier.align(Alignment.TopCenter).padding(top = 2.dp)
-        ) {
-            Text("Exit")
-        }
+            diameter = 36.dp,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 4.dp),
+        ) { glyphBack(it) }
         Text(
             text = "$value · $count",
-            color = Color.White,
+            color = AppColors.Muted,
             modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp)
         )
     }
