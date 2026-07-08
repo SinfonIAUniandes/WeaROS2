@@ -6,12 +6,10 @@ import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
 import audio_common_msgs.AudioData
-import com.jros2.wearos2.ros.WearSensor
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import com.jros2.wearos2.ros.BaseWearSensor
+import com.jros2.wearos2.ros.reliableQos
 import us.ihmc.fastddsjava.cdr.idl.IDLByteSequence
 import us.ihmc.jros2.ROS2Node
-import us.ihmc.jros2.ROS2QoSProfile
 import us.ihmc.jros2.ROS2SubscriptionCallback
 import us.ihmc.jros2.ROS2Subscription
 import us.ihmc.jros2.ROS2Topic
@@ -27,18 +25,7 @@ import java.util.concurrent.LinkedBlockingQueue
  * drains the queue into [AudioTrack] with the blocking write, so DDS delivery is never
  * stalled by audio back-pressure (which would otherwise starve the track into silence).
  */
-class AudioPlayerSensor : WearSensor {
-    override val id = "audio_playback"
-    override val name = "Speaker"
-    override val topicName = "play_audio"
-    var resolvedTopicName: String = topicName
-
-    override val enabled = MutableStateFlow(true)
-    private val _messageCount = MutableStateFlow(0L)
-    override val messageCount: StateFlow<Long> = _messageCount
-    private val _displayValue = MutableStateFlow("No audio yet")
-    override val displayValue: StateFlow<String> = _displayValue
-
+class AudioPlayerSensor : BaseWearSensor("audio_playback", "Speaker", "play_audio", "No audio yet") {
     private var subscription: ROS2Subscription<AudioData>? = null
     private var audioTrack: AudioTrack? = null
     private var playbackThread: Thread? = null
@@ -101,15 +88,6 @@ class AudioPlayerSensor : WearSensor {
             start()
         }
 
-        // jros2's default subscription QoS is BEST_EFFORT, which drops most of a
-        // RELIABLE stream (e.g. from `topic_tools relay`) over Wi-Fi. Request RELIABLE
-        // so it matches a standard ROS 2 publisher and delivers every chunk.
-        val qos = ROS2QoSProfile().apply {
-            history(ROS2QoSProfile.History.KEEP_LAST)
-            depth(10)
-            reliability(ROS2QoSProfile.Reliability.RELIABLE)
-            durability(ROS2QoSProfile.Durability.VOLATILE)
-        }
         val callback = ROS2SubscriptionCallback<AudioData> { reader ->
             // Read a fresh instance each time (matching the known-good jros2 demo).
             // Reusing one AudioData across reads risks a deserialize error on this
@@ -135,7 +113,7 @@ class AudioPlayerSensor : WearSensor {
         subscription = node.createSubscription(
             ROS2Topic(resolvedTopicName, AudioData::class.java),
             callback,
-            qos
+            reliableQos()
         )
     }
 

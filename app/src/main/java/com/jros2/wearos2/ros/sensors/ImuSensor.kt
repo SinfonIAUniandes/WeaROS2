@@ -5,27 +5,14 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import com.jros2.wearos2.ros.WearSensor
+import com.jros2.wearos2.ros.BaseWearSensor
 import com.jros2.wearos2.ros.stampHeader
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import sensor_msgs.Imu
 import us.ihmc.jros2.ROS2Node
 import us.ihmc.jros2.ROS2Publisher
 import us.ihmc.jros2.ROS2Topic
 
-class ImuSensor : WearSensor {
-    override val id = "imu"
-    override val name = "IMU"
-    override val topicName = "imu"
-    var resolvedTopicName: String = topicName
-
-    override val enabled = MutableStateFlow(true)
-    private val _messageCount = MutableStateFlow(0L)
-    override val messageCount: StateFlow<Long> = _messageCount
-    private val _displayValue = MutableStateFlow("ax=0 ay=0 az=0")
-    override val displayValue: StateFlow<String> = _displayValue
-
+class ImuSensor : BaseWearSensor("imu", "IMU", "imu", "ax=0 ay=0 az=0") {
     private val msg = Imu()
     private var publisher: ROS2Publisher<Imu>? = null
     private var sensorManager: SensorManager? = null

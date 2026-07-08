@@ -5,32 +5,19 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import audio_common_msgs.AudioData
-import com.jros2.wearos2.ros.WearSensor
+import com.jros2.wearos2.ros.BaseWearSensor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import us.ihmc.jros2.ROS2Node
 import us.ihmc.jros2.ROS2Publisher
 import us.ihmc.jros2.ROS2Topic
 
-class MicrophoneSensor : WearSensor {
-    override val id = "microphone"
-    override val name = "Mic"
-    override val topicName = "audio"
-    var resolvedTopicName: String = topicName
-
-    override val enabled = MutableStateFlow(true)
-    private val _messageCount = MutableStateFlow(0L)
-    override val messageCount: StateFlow<Long> = _messageCount
-    private val _displayValue = MutableStateFlow("16kHz mono PCM16")
-    override val displayValue: StateFlow<String> = _displayValue
-
+class MicrophoneSensor : BaseWearSensor("microphone", "Mic", "audio", "16kHz mono PCM16") {
     private var publisher: ROS2Publisher<AudioData>? = null
     private var audioRecord: AudioRecord? = null
     private val audioScope = CoroutineScope(Dispatchers.IO + SupervisorJob())

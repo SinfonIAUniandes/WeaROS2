@@ -9,12 +9,14 @@ import androidx.health.services.client.data.DataType
 import androidx.health.services.client.data.PassiveListenerConfig
 import com.jros2.wearos2.SettingsManager
 import com.jros2.wearos2.ros.sensors.AudioPlayerSensor
+import com.jros2.wearos2.ros.sensors.ButtonPublisher
 import com.jros2.wearos2.ros.sensors.FloorsSensor
 import com.jros2.wearos2.ros.sensors.GpsSensor
 import com.jros2.wearos2.ros.sensors.ImuSensor
 import com.jros2.wearos2.ros.sensors.JoystickController
 import com.jros2.wearos2.ros.sensors.MicrophoneSensor
 import com.jros2.wearos2.ros.sensors.NotificationSensor
+import com.jros2.wearos2.ros.sensors.SliderController
 import com.jros2.wearos2.ros.sensors.StepsSensor
 import com.jros2.wearos2.ros.sensors.samsung.SamsungPpgSensor
 import kotlinx.coroutines.CoroutineScope
@@ -35,6 +37,8 @@ class WearSensorBridge(private val context: Context) {
 
     val joystick = JoystickController()
     val samsung = SamsungPpgSensor()
+    val button = ButtonPublisher()
+    val slider = SliderController()
 
     val sensors = listOf(
         ImuSensor(),
@@ -45,7 +49,9 @@ class WearSensorBridge(private val context: Context) {
         FloorsSensor(),
         AudioPlayerSensor(),
         NotificationSensor(),
-        joystick
+        joystick,
+        button,
+        slider
     )
 
     private val _isRunning = MutableStateFlow(false)
@@ -85,25 +91,9 @@ class WearSensorBridge(private val context: Context) {
                 withContext(Dispatchers.Main) {
                     sensors.forEach { sensor ->
                         val rawTopic = settings.getTopicName(sensor.id, sensor.topicName)
-                        val fullTopic = if (namespace.isBlank()) {
-                            rawTopic
-                        } else if (rawTopic.startsWith("/")) {
-                            "/$namespace$rawTopic"
-                        } else {
-                            "/$namespace/$rawTopic"
-                        }
+                        val fullTopic = resolveTopic(namespace, rawTopic)
                         try {
-                            when (sensor) {
-                                is GpsSensor -> sensor.resolvedTopicName = fullTopic
-                                is ImuSensor -> sensor.resolvedTopicName = fullTopic
-                                is MicrophoneSensor -> sensor.resolvedTopicName = fullTopic
-                                is SamsungPpgSensor -> sensor.resolvedTopicName = fullTopic
-                                is StepsSensor -> sensor.resolvedTopicName = fullTopic
-                                is FloorsSensor -> sensor.resolvedTopicName = fullTopic
-                                is AudioPlayerSensor -> sensor.resolvedTopicName = fullTopic
-                                is NotificationSensor -> sensor.resolvedTopicName = fullTopic
-                                is JoystickController -> sensor.resolvedTopicName = fullTopic
-                            }
+                            sensor.resolvedTopicName = fullTopic
                             sensor.start(node, context)
                             log("${sensor.name} active on $fullTopic")
                         } catch (t: Throwable) {

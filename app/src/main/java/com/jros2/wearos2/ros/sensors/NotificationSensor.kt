@@ -9,12 +9,10 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
-import com.jros2.wearos2.ros.WearSensor
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
+import com.jros2.wearos2.ros.BaseWearSensor
+import com.jros2.wearos2.ros.reliableQos
 import std_msgs.String as RosString
 import us.ihmc.jros2.ROS2Node
-import us.ihmc.jros2.ROS2QoSProfile
 import us.ihmc.jros2.ROS2Subscription
 import us.ihmc.jros2.ROS2SubscriptionCallback
 import us.ihmc.jros2.ROS2Topic
@@ -27,18 +25,7 @@ import us.ihmc.jros2.ROS2Topic
  * Trigger it from a ROS 2 machine with, e.g.:
  *   ros2 topic pub --once /watch/notify std_msgs/String "{data: 'Hello watch'}"
  */
-class NotificationSensor : WearSensor {
-    override val id = "notification"
-    override val name = "Notify"
-    override val topicName = "notify"
-    var resolvedTopicName: String = topicName
-
-    override val enabled = MutableStateFlow(true)
-    private val _messageCount = MutableStateFlow(0L)
-    override val messageCount: StateFlow<Long> = _messageCount
-    private val _displayValue = MutableStateFlow("Waiting")
-    override val displayValue: StateFlow<String> = _displayValue
-
+class NotificationSensor : BaseWearSensor("notification", "Notify", "notify", "Waiting") {
     private var subscription: ROS2Subscription<RosString>? = null
 
     @Volatile
@@ -49,12 +36,6 @@ class NotificationSensor : WearSensor {
         ensureChannel(appContext)
         _displayValue.value = "Listening"
 
-        val qos = ROS2QoSProfile().apply {
-            history(ROS2QoSProfile.History.KEEP_LAST)
-            depth(10)
-            reliability(ROS2QoSProfile.Reliability.RELIABLE)
-            durability(ROS2QoSProfile.Durability.VOLATILE)
-        }
         val callback = ROS2SubscriptionCallback<RosString> { reader ->
             try {
                 val received = reader.read() ?: return@ROS2SubscriptionCallback
@@ -70,7 +51,7 @@ class NotificationSensor : WearSensor {
         subscription = node.createSubscription(
             ROS2Topic(resolvedTopicName, RosString::class.java),
             callback,
-            qos
+            reliableQos()
         )
     }
 

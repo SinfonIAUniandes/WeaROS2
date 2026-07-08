@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import com.jros2.wearos2.ros.WearSensor
+import com.jros2.wearos2.ros.BaseWearSensor
 import com.jros2.wearos2.ros.stampHeader
 import com.samsung.android.service.health.tracking.ConnectionListener
 import com.samsung.android.service.health.tracking.HealthTracker
@@ -34,18 +34,13 @@ import us.ihmc.jros2.ROS2Topic
  * Requires the Samsung Health Sensor API AAR plus the `android.permission.health.*`
  * runtime permissions on Android 16 / Health Platform (see the manifest and MainActivity).
  */
-class SamsungPpgSensor : WearSensor {
+class SamsungPpgSensor : BaseWearSensor(
+    "samsung_ppg",
+    "Samsung SpO2 & Heart Rate",
+    "samsung_health",
+    "Connecting to Samsung Health...",
+) {
     private val TAG = "SamsungPpgSensor"
-    override val id = "samsung_ppg"
-    override val name = "Samsung SpO2 & Heart Rate"
-    override val topicName = "samsung_health"
-    var resolvedTopicName: String = topicName
-
-    override val enabled = MutableStateFlow(true)
-    private val _messageCount = MutableStateFlow(0L)
-    override val messageCount: StateFlow<Long> = _messageCount
-    private val _displayValue = MutableStateFlow("Connecting to Samsung Health...")
-    override val displayValue: StateFlow<String> = _displayValue
 
     // Dedicated SpO2 state for the on-demand measurement UI.
     private val _spo2Measuring = MutableStateFlow(false)

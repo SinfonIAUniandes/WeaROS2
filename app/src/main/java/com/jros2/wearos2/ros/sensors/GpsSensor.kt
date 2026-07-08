@@ -5,28 +5,15 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
-import com.jros2.wearos2.ros.WearSensor
+import com.jros2.wearos2.ros.BaseWearSensor
 import com.jros2.wearos2.ros.stampHeader
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import sensor_msgs.NavSatFix
 import sensor_msgs.NavSatStatus
 import us.ihmc.jros2.ROS2Node
 import us.ihmc.jros2.ROS2Publisher
 import us.ihmc.jros2.ROS2Topic
 
-class GpsSensor : WearSensor {
-    override val id = "gps"
-    override val name = "GPS"
-    override val topicName = "gps"
-    var resolvedTopicName: String = topicName
-
-    override val enabled = MutableStateFlow(true)
-    private val _messageCount = MutableStateFlow(0L)
-    override val messageCount: StateFlow<Long> = _messageCount
-    private val _displayValue = MutableStateFlow("Waiting for fix")
-    override val displayValue: StateFlow<String> = _displayValue
-
+class GpsSensor : BaseWearSensor("gps", "GPS", "gps", "Waiting for fix") {
     private val msg = NavSatFix()
     private var publisher: ROS2Publisher<NavSatFix>? = null
     private var locationManager: LocationManager? = null

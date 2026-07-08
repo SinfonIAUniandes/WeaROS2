@@ -1,10 +1,8 @@
 package com.jros2.wearos2.ros.sensors
 
 import android.content.Context
-import com.jros2.wearos2.ros.WearSensor
+import com.jros2.wearos2.ros.BaseWearSensor
 import com.jros2.wearos2.ros.stampHeader
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import sensor_msgs.Joy
 import us.ihmc.jros2.ROS2Node
 import us.ihmc.jros2.ROS2Publisher
@@ -16,18 +14,7 @@ import us.ihmc.jros2.ROS2Topic
  * both normalized to [-1, 1]. The UI calls [publishAxes] on every touch move and once
  * with (0, 0) on release so the consumer sees the stick recenter.
  */
-class JoystickController : WearSensor {
-    override val id = "joystick"
-    override val name = "Joystick"
-    override val topicName = "joy"
-    var resolvedTopicName: String = topicName
-
-    override val enabled = MutableStateFlow(true)
-    private val _messageCount = MutableStateFlow(0L)
-    override val messageCount: StateFlow<Long> = _messageCount
-    private val _displayValue = MutableStateFlow("x=0.00 y=0.00")
-    override val displayValue: StateFlow<String> = _displayValue
-
+class JoystickController : BaseWearSensor("joystick", "Joystick", "joy", "x=0.00 y=0.00") {
     private val msg = Joy()
     private var publisher: ROS2Publisher<Joy>? = null
 
