@@ -1,12 +1,9 @@
 package com.jros2.wearos2.presentation
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -24,10 +21,11 @@ import com.jros2.wearos2.presentation.theme.WeaROS2Theme
 
 /** The screens the app can show. Add a case here plus a branch in [MainActivity] to grow. */
 private sealed interface Screen {
-    data object Home : Screen
+    data object Main : Screen
     data object Settings : Screen
     data object Joystick : Screen
-    data object Slider : Screen
+    data object Spo2 : Screen
+    data object Logs : Screen
 }
 
 class MainActivity : ComponentActivity() {
@@ -49,31 +47,31 @@ class MainActivity : ComponentActivity() {
         bridge = RosBridgeHolder.get(this)
         setContent {
             WeaROS2Theme {
-                var screen by remember { mutableStateOf<Screen>(Screen.Home) }
+                var screen by remember { mutableStateOf<Screen>(Screen.Main) }
                 when (screen) {
                     Screen.Settings -> WearSettings(bridge, settings) {
                         if (bridge.isRunning.value) stopBridge()
-                        screen = Screen.Home
+                        screen = Screen.Main
                     }
-                    Screen.Joystick -> JoystickScreen(bridge.joystick) { screen = Screen.Home }
-                    Screen.Slider -> SliderScreen(bridge.slider) { screen = Screen.Home }
-                    Screen.Home -> WearHome(
+                    Screen.Joystick -> JoystickScreen(bridge.joystick) { screen = Screen.Main }
+                    Screen.Spo2 -> Spo2Screen(bridge.samsung) { screen = Screen.Main }
+                    Screen.Logs -> LogsScreen(bridge) { screen = Screen.Main }
+                    Screen.Main -> MainScreen(
                         bridge = bridge,
-                        onRequestPermissions = { requestRuntimePermissions() },
-                        onOpenSettings = { openAppSettings() },
-                        onSettingsClick = { screen = Screen.Settings },
-                        onJoystickClick = {
-                            // The joystick publishes on the shared ROS2 node, so make sure
-                            // the bridge is running before opening the control.
+                        onStartBridge = { startBridge() },
+                        onStopBridge = { stopBridge() },
+                        // The joystick/SpO2 need the shared ROS2 node, so ensure the bridge
+                        // is running before opening them.
+                        onJoystick = {
                             if (!bridge.isRunning.value) startBridge()
                             screen = Screen.Joystick
                         },
-                        onSliderClick = {
+                        onSpo2 = {
                             if (!bridge.isRunning.value) startBridge()
-                            screen = Screen.Slider
+                            screen = Screen.Spo2
                         },
-                        onStartBridge = { startBridge() },
-                        onStopBridge = { stopBridge() },
+                        onSettings = { screen = Screen.Settings },
+                        onLogs = { screen = Screen.Logs },
                     )
                 }
             }
@@ -88,15 +86,6 @@ class MainActivity : ComponentActivity() {
     /** Stop the bridge and tear the foreground service down. */
     private fun stopBridge() {
         startService(BridgeService.stopIntent(this))
-    }
-
-    private fun openAppSettings() {
-        startActivity(
-            Intent(
-                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                Uri.fromParts("package", packageName, null)
-            )
-        )
     }
 
     private fun clearJavaCPPCache() {

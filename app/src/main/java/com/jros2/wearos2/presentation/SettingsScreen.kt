@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +30,7 @@ import androidx.wear.compose.material3.AppScaffold
 import androidx.wear.compose.material3.Button
 import androidx.wear.compose.material3.ListHeader
 import androidx.wear.compose.material3.ScreenScaffold
+import androidx.wear.compose.material3.SwitchButton
 import androidx.wear.compose.material3.Text
 import com.jros2.wearos2.SettingsManager
 import com.jros2.wearos2.ros.WearSensorBridge
@@ -97,15 +99,26 @@ fun WearSettings(bridge: WearSensorBridge, settings: SettingsManager, onBack: ()
                 }
                 items(bridge.sensors.size) { index ->
                     val sensor = bridge.sensors[index]
+                    val enabled by sensor.enabled.collectAsState()
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-                        Text(sensor.name, color = Color.Gray)
+                        // Enable/disable this feature (persisted, takes effect live).
+                        SwitchButton(
+                            checked = enabled,
+                            onCheckedChange = { checked ->
+                                sensor.enabled.value = checked
+                                settings.setSensorEnabled(sensor.id, checked)
+                            },
+                            label = { Text(sensor.name) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                         BasicTextField(
                             value = topicNames[sensor.id] ?: "",
                             onValueChange = { topicNames[sensor.id] = it },
                             singleLine = true,
-                            textStyle = TextStyle(color = Color.White),
+                            enabled = enabled,
+                            textStyle = TextStyle(color = if (enabled) Color.White else Color.Gray),
                             cursorBrush = SolidColor(Color.White),
-                            modifier = Modifier.fillMaxWidth().background(Color.DarkGray, RoundedCornerShape(8.dp)).padding(10.dp)
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp).background(Color.DarkGray, RoundedCornerShape(8.dp)).padding(10.dp)
                         )
                     }
                 }

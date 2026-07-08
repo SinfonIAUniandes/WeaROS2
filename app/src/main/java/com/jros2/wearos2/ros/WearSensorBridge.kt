@@ -54,6 +54,11 @@ class WearSensorBridge(private val context: Context) {
         slider
     )
 
+    init {
+        // Restore each feature's on/off preference (defaults to on).
+        sensors.forEach { it.enabled.value = settings.isSensorEnabled(it.id, true) }
+    }
+
     private val _isRunning = MutableStateFlow(false)
     val isRunning: StateFlow<Boolean> = _isRunning.asStateFlow()
 

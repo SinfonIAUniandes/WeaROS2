@@ -22,4 +22,12 @@ class SettingsManager(context: Context) {
     fun setTopicName(sensorId: String, topicName: String) {
         prefs.edit().putString("topic_$sensorId", topicName).apply()
     }
+
+    fun isSensorEnabled(sensorId: String, default: Boolean = true): Boolean {
+        return prefs.getBoolean("enabled_$sensorId", default)
+    }
+
+    fun setSensorEnabled(sensorId: String, enabled: Boolean) {
+        prefs.edit().putBoolean("enabled_$sensorId", enabled).apply()
+    }
 }

@@ -32,15 +32,20 @@ Interactive **controls** on the home screen let you publish on demand (all use g
 | Publish button | `button` | `std_msgs/Bool` | Publishes `data: true` each time you tap the **Publish button** card. (`std_msgs/Empty` would be the more literal trigger, but jros2 serializes it as zero bytes, which isn't wire-compatible with rosidl's Empty — it breaks `ros2 topic echo` and rqt.) |
 | Slider | `slider` | `std_msgs/Float32` | Full-screen round slider for a generic scalar (robot volume, speed limit, brightness…). Turn the rotating bezel/crown or drag around the ring; publishes a normalized 0.0–1.0 value on every change. |
 
-Opening the Joystick or Slider auto-starts the bridge; tap **Exit** to return.
+Opening the Joystick or SpO2 auto-starts the bridge; tap the back arrow to return.
 
 Topics are published/subscribed under a configurable namespace (default `watch`, e.g. `/watch/imu`), and each sensor/receiver/control's topic name can be overridden individually from in-app Settings, along with the ROS 2 domain ID.
 
-From the watch face:
-- Toggle individual sensors on/off
-- Start/stop the ROS 2 bridge
-- View live message counts and a rolling log for debugging
-- Jump to OS permission settings if a required permission is missing
+### The UI
+
+A single, icon-driven home screen keeps the app focused on its one job:
+
+- **Big central button** starts/stops publishing (green play → red stop).
+- **Slider** along the bottom (drag it or turn the rotating bezel) publishes the `slider` value; while you're using it the other buttons are blocked to avoid mis-taps.
+- **Publish button** (the `+` icon) sends a one-off `button` message.
+- Icons open the sub-screens: **Joystick**, **SpO2** (a measurement screen with a progress ring), **Settings**, and **Logs**.
+
+**Settings** edits the domain id, namespace, and per-feature topic names, and has a toggle to enable/disable each feature — all persisted. **Logs** shows the rolling activity log.
 
 ## Running in the background
 
@@ -84,9 +89,12 @@ For the Samsung heart-rate/SpO2 sensor to deliver data you must also enable **He
 app/src/main/java/com/jros2/wearos2/
 ├── presentation/             # Compose UI, one file per screen
 │   ├── MainActivity.kt       # Activity: lifecycle, permissions, screen navigation
-│   ├── HomeScreen.kt         # WearHome — bridge controls + live feature list
-│   ├── SettingsScreen.kt     # WearSettings — domain id, namespace, topic overrides
+│   ├── UiKit.kt              # Shared palette + Canvas-drawn icon buttons (no icon lib)
+│   ├── MainScreen.kt         # Home: hero start/stop, nav icons, publish, integrated slider
+│   ├── SettingsScreen.kt     # Domain id, namespace, per-feature enable toggle + topic
 │   ├── JoystickScreen.kt     # Full-screen touch joystick
+│   ├── Spo2Screen.kt         # On-demand SpO2 measurement with a progress ring
+│   ├── LogsScreen.kt         # Scrollable activity log
 │   └── theme/
 ├── ros/
 │   ├── WearSensor.kt         # The feature interface (publishers, subscribers, controls)
